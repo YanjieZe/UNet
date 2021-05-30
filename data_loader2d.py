@@ -91,19 +91,33 @@ class SunrgbdImageDataset(torchdata.Dataset):
         self.depth_path = os.path.join(self.raw_datapath, 'depth')
         self.image_names = open(os.path.join(self.raw_datapath, 'data_list', split_set,'{}.txt'.format(class_name))).read().splitlines()
         
+        # self.transform = transforms.Compose(
+        #     transforms.Resize(size=(512,512)),
+        #     transforms.ToTensor()
+        # )
        
-    def augmentaion(self, image):
+    def augmentaion(self, image, is_label=False):
         """
         TODO: add more augmentation methods
         """
+        if is_label:
+            # to image
+            toimg = transforms.ToPILImage()
+            image = toimg(image)
+         # gray
+        trans_gray = transforms.Grayscale()
+        image = trans_gray(image)
+
         # resize
         resize =transforms.Resize(size=(512,512))
         image = resize(image)
 
-        # gray
-        trans_gray = transforms.Grayscale()
-        image = trans_gray(image)
+        # To tenor
+        totensor = transforms.ToTensor()
+        image = totensor(image)
+       
         return image
+    
     
     def __len__(self):
         return len(self.image_names)
@@ -115,11 +129,8 @@ class SunrgbdImageDataset(torchdata.Dataset):
 
         # RGB image
         image = pil.open(image_path)
-        # augment
         image = self.augmentaion(image)
-        # to tensor
-        totensor = transforms.ToTensor()
-        image = totensor(image)
+        
 
         # Depth image (to be used)
         depth_image = sio.loadmat(depth_path)['instance']
@@ -135,8 +146,7 @@ class SunrgbdImageDataset(torchdata.Dataset):
         mask = seg_label==self.class_idx
         seg_label[:] = 0
         seg_label[mask] = 1
-        
-       
+        seg_label = self.augmentaion(image, is_label=True)
 
         return {'image_name':image_name,'image':image, 'seg_label':seg_label, 'bbox2d':bbox2d, 'depth_image':depth_image}
 
@@ -150,5 +160,5 @@ if __name__=='__main__':
     dataset = SunrgbdImageDataset(split_set='train')
     #print(dataset.image_names)
 
-    print(dataset[2]['image'].shape)
+    print(dataset[6]['image'])
 
